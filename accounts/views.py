@@ -55,4 +55,13 @@ class TransferBalance(APIView):
         serializer = TransactionSerializer(data=request.data) # type: ignore
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        
+        response_data = {
+            "transaction": serializer.data,
+            "accounts": {
+                "src": AccountSerializer(serializer.validated_data["src_account"]).data, # type: ignore
+                "dest": AccountSerializer(serializer.validated_data["dest_account"]).data, # type: ignore
+            }
+        }
+
+        return Response(data=response_data, status=status.HTTP_201_CREATED)
