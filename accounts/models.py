@@ -29,6 +29,6 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         max_digits=DECIMAL_MAX_DIGITS,
         decimal_places=DECIMAL_PLACES,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(1)],
     )
     created_at = models.DateTimeField(auto_now_add=True)
