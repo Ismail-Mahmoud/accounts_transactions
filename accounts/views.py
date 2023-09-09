@@ -1,11 +1,11 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpRequest
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 from .models import Account
-from .serializers import AccountSerializer
+from .serializers import AccountSerializer, TransactionSerializer
 
 
 def welcome(reauest: HttpRequest):
@@ -42,3 +42,17 @@ class AccountsList(APIView):
         serializer.save()
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
     
+
+
+# class ImportAccounts(APIView):
+#     def post(self, request: Request):
+#         pass
+
+
+class TransferBalance(APIView):
+    def post(self, request: Request):
+        """Create new transaction"""
+        serializer = TransactionSerializer(data=request.data) # type: ignore
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
