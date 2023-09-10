@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Account Transaction - OpenAPI 3.0
+  version: 1.0.0
+
+servers:
+  - url: http://127.0.0.1:8000
+
+paths:
+  /accounts/:
+    get:
+      description: List all accounts
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/accounts_list'
+    
+    post:
+      description: Create new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/account'
+      responses:
+        '200':
+          description: Successful account creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account'
+        '400':
+          description: Invalid account data
+        
+  /accounts/{id}/:
+    get:
+      description: Get account by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Account ID
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/account'
+        '404':
+          description: Account not found
+  
+  /accounts/transfer/:
+    post:
+      description: Transfer balance between two accounts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/transaction'
+      responses:
+        '201':
+          description: Successful transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction'
+        '400':
+          description: Invalid transaction (source and destination are the same / amount exceeds source balance)
+  
+  /accounts/import/:
+    put:
+      description: Import accounts from uploaded file
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+              format: base64
+          application/json:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200': 
+          description: Successful import
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/accounts_list'
+        '400':
+          description: Unsupported file format / Invalid data
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        balance:
+          type: number
+          multipleOf: 0.01
+      required:
+        - name
+    
+    accounts_list:
+      type: array
+      items:
+        $ref: '#/components/schemas/account'
+    
+    transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        src_account:
+          type: string
+          format: uuid
+        dest_account:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          multipleOf: 0.01
+      required:
+        - src_account
+        - dest_account
+        - amount
+        
