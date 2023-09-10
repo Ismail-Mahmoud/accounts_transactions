@@ -1,0 +1,27 @@
+[
+    {
+        "id": "6e17b81c-0a0c-414d-8514-eb19633753b5",
+        "name": "Tommy Veldens",
+        "balance": 296.32
+    },
+    {
+        "id": "85e6f560-7eb5-4f17-b933-85c7a1cce34d",
+        "name": "Gavin Klehyn",
+        "balance": 709.29
+    },
+    {
+        "id": "a408e676-c967-42fd-8259-7e73654dcbe6",
+        "name": "Bianca Coste",
+        "balance": 433.77
+    },
+    {
+        "id": "3615356d-5bdb-4280-b760-80a4b7d4f88e",
+        "name": "Zebedee Gillibrand",
+        "balance": 118.4
+    },
+    {
+        "id": "7b48b558-2091-4623-b8ba-128d783831b3",
+        "name": "Barnebas Towse",
+        "balance": 210.08
+    }
+]
