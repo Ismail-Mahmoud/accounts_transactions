@@ -1,67 +1,98 @@
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, HttpRequest
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.request import Request
+import csv
+import io
+
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from rest_framework import status
-from .models import Account
-from .serializers import AccountSerializer, TransactionSerializer
+from rest_framework.generics import ListCreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.request import Request
+from rest_framework.response import Response
+
+from account_transactions.settings import UPLOADED_FILES
+
+from .models import Account, Transaction
+from .serializers import AccountSerializer, TransactionSerializer, UploadSerializer
 
 
-def welcome(reauest: HttpRequest):
-    return HttpResponse("Hello World!")
+class AccountList(ListCreateAPIView):
+    queryset = Account.objects.all()
+    serializer_class = AccountSerializer
 
 
-class AccountInfo(APIView):
-    def get(self, request: Request, id):
-        """Get account by ID"""
-        account = get_object_or_404(Account, pk=id)
-        serializer = AccountSerializer(instance=account)
-        return Response(serializer.data)
-    
-    def patch(self, request: Request, id):
-        """Update account by ID"""
-        account = get_object_or_404(Account, pk=id)
-        serializer = AccountSerializer(instance=account, data=request.data, partial=True) # type: ignore
-        serializer.is_valid(raise_exception=True)
-        serializer.update(instance=account, validated_data=request.data)
-        return Response(data=serializer.data)
+class AccountDetail(RetrieveAPIView):
+    queryset = Account.objects.all()
+    serializer_class = AccountSerializer
 
 
-class AccountsList(APIView):
-    def get(self, request: Request):
-        """List all accounts"""
-        queryset = Account.objects.all()
-        serializer = AccountSerializer(queryset, many=True)
-        return Response(serializer.data)
-    
-    def post(self, request: Request):
-        """Create new account"""
-        serializer = AccountSerializer(data=request.data) # type: ignore
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
-    
+class TransferList(ListCreateAPIView):
+    queryset = Transaction.objects.all()
+    serializer_class = TransactionSerializer
 
 
-# class ImportAccounts(APIView):
-#     def post(self, request: Request):
-#         pass
+class UploadViewSet(UpdateAPIView):
+    serializer_class = UploadSerializer
+    queryset = Account.objects.all()
 
-
-class TransferBalance(APIView):
-    def post(self, request: Request):
-        """Create new transaction"""
-        serializer = TransactionSerializer(data=request.data) # type: ignore
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+    def update(self, request: Request):
+        accounts_file = request.data.get("accounts_file", None) # type: ignore
         
-        response_data = {
-            "transaction": serializer.data,
-            "accounts": {
-                "src": AccountSerializer(serializer.validated_data["src_account"]).data, # type: ignore
-                "dest": AccountSerializer(serializer.validated_data["dest_account"]).data, # type: ignore
-            }
-        }
+        try:
+            response = self.import_accounts(accounts_file)
+        except Exception as e:
+            response = Response(
+                f"Error while importing accounts: {e}",
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return response
 
-        return Response(data=response_data, status=status.HTTP_201_CREATED)
+
+    def import_accounts(self, file) -> Response:
+        if not isinstance(file, InMemoryUploadedFile):
+            return Response("No file chosen.", status=status.HTTP_400_BAD_REQUEST)
+        
+        SUPPORTED_FILE_FORMATS = UPLOADED_FILES["supported_formats"]
+
+        content_type = file.content_type
+        file = file.read().decode("utf-8")
+        io_file = io.StringIO(file) # type: ignore
+        accounts: list[dict] = []
+
+        if content_type == "text/csv":
+            accounts = [row for row in csv.DictReader(io_file)]
+        elif content_type == "application/json":
+            import json
+            accounts = json.load(io_file)
+        else:
+            return Response(
+                f"File format not supported. Supported formats are: {SUPPORTED_FILE_FORMATS}",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            db_accounts = [
+                Account(
+                    id=acc["id"],
+                    name=acc["name"],
+                    balance=acc["balance"],
+                )
+                for acc in accounts
+            ]
+        except KeyError:
+            return Response(
+                f"Key error. Accounts keys must be {['id', 'name', 'balance']}",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # merge or replace?
+        response_data = Account.objects.bulk_create(
+            db_accounts,
+            update_fields=["balance"],
+            update_conflicts=True,
+            unique_fields=["id"], # type: ignore
+        )
+        
+        return Response(
+            # f"{len(db_accounts)} Accounts imported successfully.",
+            [AccountSerializer(instance=acc).data for acc in response_data],
+            status=status.HTTP_200_OK
+        )

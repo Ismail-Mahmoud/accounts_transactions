@@ -1,5 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
+
 from .models import Account, Transaction
 
 
@@ -33,6 +34,13 @@ class TransactionSerializer(serializers.ModelSerializer):
             src_account.save()
             dest_account.save()
         
-        with transaction.atomic():    
+        with transaction.atomic():
             transfer()
             return super().save(**kwargs)
+
+
+class UploadSerializer(serializers.Serializer):
+    accounts_file = serializers.FileField()
+    
+    class Meta:
+        fields = ['accounts_file']
