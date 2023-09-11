@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+.vscode
+*.sqlite
+*.sqlite3
+.coverage
+.pytest_cache
+.git/
+.gitignore
