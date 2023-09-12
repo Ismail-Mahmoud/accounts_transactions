@@ -1,15 +1,31 @@
 from django.contrib import admin
 from django.db import transaction
+from import_export.admin import ImportExportModelAdmin
+from import_export.fields import Field
+from import_export.resources import ModelResource
 
-from .models import Account, Transaction
+from account_transactions.settings import UPLOADED_FILES
+
 from .forms import TransactionAdminForm
+from .models import Account, Transaction
+
+
+class AccountResource(ModelResource):
+    id = Field(attribute="id")
+    name = Field(attribute="name")
+    balance = Field(attribute="balance")
+    
+    class Meta:
+        model = Account
 
 
 @admin.register(Account)
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(ImportExportModelAdmin):
     list_display = ["id", "name", "balance"]
     list_per_page = 10
     search_fields = ["name", "id"]
+
+    resource_class = AccountResource
 
 
 @admin.register(Transaction)
