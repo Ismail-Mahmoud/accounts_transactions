@@ -32,8 +32,8 @@ def create_transaction(api_client):
         return api_client.post("/accounts/transfer/", transaction)
     return send_request
 
-# @pytest.fixture
-# def upload_file(api_client):
-#     def send_request(filename, content, content_type):
-#         return api_client.post("/accounts/transfer/", transaction)
-#     return send_request
+@pytest.fixture
+def upload_file(api_client):
+    def send_request(file):
+        return api_client.put("/accounts/import/", {"accounts_file": file})
+    return send_request

@@ -210,7 +210,7 @@ class TestTransferBalance:
 
 @pytest.mark.django_db
 class TestImportAccounts:
-    def test_successful_import_csv_200(self, api_client):
+    def test_successful_import_csv_200(self, upload_file):
         file = SimpleUploadedFile(
             name="accounts.csv",
             content=b"""id,name,balance
@@ -223,10 +223,10 @@ d0610e17-f072-4a94-8ab8-238740ed3fe4,Cacilie Stovold,208.47
             content_type="text/csv"
         )
 
-        response: Response = api_client.put("/accounts/import/", {"accounts_file": file})
+        response: Response = upload_file(file)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_successful_import_json_200(self, api_client):
+    def test_successful_import_json_200(self, upload_file):
         file = SimpleUploadedFile(
             name="accounts.json",
             content=b"""[
@@ -259,10 +259,12 @@ d0610e17-f072-4a94-8ab8-238740ed3fe4,Cacilie Stovold,208.47
             content_type="application/json"
         )
 
-        response: Response = api_client.put("/accounts/import/", {"accounts_file": file})
+        response: Response = upload_file(file)
 
         response_accounts = response.data
         database_accounts = Account.objects.all()
+            
+        assert response.status_code == status.HTTP_200_OK
         
         for db_acc, res_acc in zip(database_accounts, response_accounts):
             assert res_acc == {
@@ -270,26 +272,24 @@ d0610e17-f072-4a94-8ab8-238740ed3fe4,Cacilie Stovold,208.47
                 "name": db_acc.name,
                 "balance": db_acc.balance,
             }
-            
-        assert response.status_code == status.HTTP_200_OK
 
-    def test_unsupported_format_400(self, api_client):
+    def test_unsupported_format_400(self, upload_file):
         file = SimpleUploadedFile(
             name="accounts.txt",
             content=b"asdf",
             content_type="text/plain"
         )
 
-        response: Response = api_client.put("/accounts/import/", {"accounts_file": file})
+        response: Response = upload_file(file)
             
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_no_file_chosen_400(self, api_client):
+    def test_no_file_chosen_400(self, upload_file):
         file = ""
-        response: Response = api_client.put("/accounts/import/", {"accounts_file": file})
+        response: Response = upload_file(file)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_account_key_error_400(self, api_client):
+    def test_account_key_error_400(self, upload_file):
         file = SimpleUploadedFile(
             name="accounts.csv",
             content=b"""ID,FULL_NAME,BALANCE
@@ -298,6 +298,6 @@ cc26b56c-36f6-41f1-b689-d1d5065b95af,John Doe,797.22
             content_type="text/csv"
         )
 
-        response: Response = api_client.put("/accounts/import/", {"accounts_file": file})
+        response: Response = upload_file(file)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
